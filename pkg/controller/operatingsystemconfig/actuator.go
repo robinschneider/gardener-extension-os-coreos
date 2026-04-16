@@ -152,14 +152,6 @@ func (a *actuator) handleProvisionOSC(ctx context.Context, osc *extensionsv1alph
 		ptr.To(0o755),
 	))
 
-	// Forward all journal logs to the serial console so they appear in the
-	// OpenStack nova console log (openstack console log show <id>).
-	cfg.Storage.Files = append(cfg.Storage.Files, newIgnitionFile(
-		"/etc/systemd/journald.conf.d/00-forward-console.conf",
-		"[Journal]\nForwardToConsole=yes\n",
-		ptr.To(0o644),
-	))
-
 	// Convert files from the OSC spec.
 	for _, file := range osc.Spec.Files {
 		source, err := fileContentToDataURI(ctx, a.client, osc.Namespace, file)
