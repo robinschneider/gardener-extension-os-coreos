@@ -10,6 +10,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"path/filepath"
 	"strings"
 	"text/template"
@@ -267,17 +268,28 @@ func newIgnitionFile(path, content string, mode *int) igntypes.File {
 }
 
 // fileContentToDataURI resolves an OSC file's content (inline or from a k8s Secret) and
-// returns it as a base64 data URI suitable for an Ignition storage file.
+// returns it as a data URI suitable for an Ignition storage file source.
+//
+// For plain-encoded inline content (encoding: "") we use a non-base64 data URI
+// (data:,<url-encoded>) so that the machine-controller-manager can find and replace
+// placeholder strings such as <<BOOTSTRAP_TOKEN>> and <<MACHINE_NAME>>.
+// The MCM explicitly looks for url.QueryEscape(placeholder) when processing Ignition
+// user-data. Using base64 would hide these placeholders from the MCM, causing the node
+// to receive the literal placeholder string as the bootstrap token.
+//
+// For base64-encoded inline content (encoding: "b64") and for Secret references we use
+// the standard base64 data URI (data:;base64,<b64>) because the content does not
+// contain MCM placeholders.
 func fileContentToDataURI(ctx context.Context, cl client.Client, namespace string, file extensionsv1alpha1.File) (string, error) {
 	if file.Content.Inline != nil {
-		var b64 string
 		if file.Content.Inline.Encoding == string(extensionsv1alpha1.B64FileCodecID) {
-			// Data is already base64-encoded.
-			b64 = file.Content.Inline.Data
-		} else {
-			b64 = base64.StdEncoding.EncodeToString([]byte(file.Content.Inline.Data))
+			// Data is already base64-encoded; embed it directly in a base64 data URI.
+			return "data:;base64," + file.Content.Inline.Data, nil
 		}
-		return "data:;base64," + b64, nil
+		// Plain text: use a percent-encoded data URI so MCM placeholder strings
+		// (<<BOOTSTRAP_TOKEN>>, <<MACHINE_NAME>>) remain visible in the Ignition JSON
+		// and can be substituted by the machine-controller-manager before the VM boots.
+		return "data:," + url.QueryEscape(file.Content.Inline.Data), nil
 	}
 	if file.Content.SecretRef != nil {
 		secret := &corev1.Secret{}

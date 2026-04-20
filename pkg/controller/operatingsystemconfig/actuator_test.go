@@ -129,8 +129,9 @@ var _ = Describe("Actuator", func() {
 				Expect(filePaths).To(ContainElement("/some/file"))
 				for _, f := range ign.Storage.Files {
 					if f.Path == "/some/file" {
-						// "bar" base64-encoded is "YmFy"
-						Expect(f.Contents.Source).To(Equal("data:;base64,YmFy"))
+						// Plain-encoded content uses a percent-encoded data URI so MCM
+						// placeholder strings remain visible for substitution.
+						Expect(f.Contents.Source).To(Equal("data:,bar"))
 					}
 				}
 
