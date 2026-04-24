@@ -280,7 +280,9 @@ restrict [::1]
 
 interface ignore wildcard
 interface listen 127.0.0.1
-interface listen dev1 dev2`,
+interface listen dev1
+interface listen dev2
+`,
 						},
 					},
 				}))
