@@ -94,6 +94,9 @@ generate: $(CONTROLLER_GEN) $(EXTENSION_GEN) $(CRD_REF_DOCS) $(HELM) $(KUSTOMIZE
 format: $(GOIMPORTS) $(GOIMPORTSREVISER)
 	@bash $(GARDENER_HACK_DIR)/format.sh ./cmd ./pkg
 
+.PHONY: fmt
+fmt: format
+
 .PHONY: sast
 sast: $(GOSEC)
 	@./hack/sast.sh
